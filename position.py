@@ -13,13 +13,15 @@ from time import strftime,localtime
 from email.MIMEText import MIMEText
 from email.Header import Header
 
-mailto_list=['zhangpeng@1006.tv', 'yangyunwei@1006.tv'] 
+mailto_list=['yangyunwei@1006.tv'] 
 mail_host="smtp.126.com"  	#设置服务器
 mail_user="python_112"    	#用户名
 mail_pass="ft4703895"     	#口令 
 mail_postfix="126.com"    	#发件箱的后缀
 more_num = ['146671', '2288776', '2116009', '1964120']
 determine = 0
+
+
 
 def send_mail(to_list,sub,content) :
         me = "SSDB-48" + "<" + mail_user + "@" + mail_postfix + ">"
@@ -37,8 +39,8 @@ def send_mail(to_list,sub,content) :
         except Exception, e :
             print str(e)
             return False
-			
-			
+	
+	
 def flag(num) :
 	flag = 0
 	html = 'http://moniapi.eastmoney.com/webapi/json.aspx?type=user_hold&zh=' + num + '&recIdx=0&recCnt=100&js=zuheinfo49988359((x))&callback=zuheinfo49988359&_=1471491487857'
@@ -49,7 +51,7 @@ def flag(num) :
 	else :
 		return flag	
 
-		
+	
 def catch(num) :
 	html = 'http://moniapi.eastmoney.com/webapi/json.aspx?type=user_hold&zh=' + num + '&recIdx=0&recCnt=100&js=zuheinfo49988359((x))&callback=zuheinfo49988359&_=1471491487857'
         more_list = urllib2.urlopen(html).read().split(",")
@@ -91,11 +93,29 @@ def diffile(num) :
 	if '+' in diff or '-' in diff :
 		os.remove('/tmp/file/' + num + '.txt')
 		os.rename('/tmp/file/temp' + num + '.txt', '/tmp/file/' + num + '.txt')
-		determine += 1
 	else :
 		os.remove('/tmp/file/temp' + num + '.txt')
-	print determine
-		
+	
+	
+def thelast() :
+	global determine
+	alx = int(os.popen("egrep  '\-|\+' /tmp/change |wc -l").read())
+	if alx % 2 == 0 :
+		code_list = (os.popen("grep  '-' /tmp/change  |awk '{print $2}'").read()).split('\n')
+		code_list.remove('')
+		for code in code_list :
+			cmd = "grep %s /tmp/change |awk '{print $3}'" % (code)
+			number_list = (os.popen(cmd).read()).split('%\n')
+			number_list.remove('')
+			if len(number_list) == 1 :
+				determine += 1
+			else :
+				difference = abs(int(number_list[0]) - int(number_list[1]))
+				if difference > 5 :
+					determine += 1
+	else :
+		determine += 1
+	print determine	
 
 
 if __name__ == "__main__" :
@@ -121,6 +141,7 @@ if __name__ == "__main__" :
 			Dictionaries = catch(num)
 			writefile(num, Dictionaries)
 	else :
+		thelast()
 		if determine != 0 :
 			file = open("/tmp/change")
 	                line = file.read()
@@ -130,3 +151,4 @@ if __name__ == "__main__" :
                        			print "Send success"
                 		else:
 					print "Send fail"
+
