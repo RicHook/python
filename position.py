@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 # -*- coding=utf-8 -*- 
+# 2016-8-26 First edition 
 # @Author RichHook
 
 import sys
@@ -8,33 +9,36 @@ import urllib2
 import os
 import difflib
 import smtplib
+from time import strftime,localtime
 from email.MIMEText import MIMEText
 from email.Header import Header
 
-mailto_list=['yangyunwei@1006.tv',] 
-mail_host="smtp.163.com"  #设置服务器
-mail_user="python_112"    #用户名
-mail_pass="www.1006.tv"   #口令 
-mail_postfix="163.com"  #发件箱的后缀
-more_num = ['146671', '2288776', '2116009', '718335']
+mailto_list=['zhangpeng@1006.tv', 'yangyunwei@1006.tv'] 
+mail_host="smtp.126.com"  	#设置服务器
+mail_user="python_112"    	#用户名
+mail_pass="ft4703895"     	#口令 
+mail_postfix="126.com"    	#发件箱的后缀
+more_num = ['146671', '2288776', '2116009', '1964120']
 determine = 0
 
-def send_mail(to_list,sub,content):
+def send_mail(to_list,sub,content) :
         me = "SSDB-48" + "<" + mail_user + "@" + mail_postfix + ">"
         msg = MIMEText(content, _subtype='plain', _charset='utf_8')
         msg['Subject'] = sub
         msg['From'] = me
-        msg['To'] = ";".join(to_list)
-        try:
+        msg['To'] = to_list
+        try :
                 server = smtplib.SMTP()
                 server.connect(mail_host)
                 server.login(mail_user,mail_pass)
                 server.sendmail(me, to_list, msg.as_string())
                 server.close()
                 return True
-        except Exception, e     :
+        except Exception, e :
             print str(e)
             return False
+			
+			
 def flag(num) :
 	flag = 0
 	html = 'http://moniapi.eastmoney.com/webapi/json.aspx?type=user_hold&zh=' + num + '&recIdx=0&recCnt=100&js=zuheinfo49988359((x))&callback=zuheinfo49988359&_=1471491487857'
@@ -45,6 +49,7 @@ def flag(num) :
 	else :
 		return flag	
 
+		
 def catch(num) :
 	html = 'http://moniapi.eastmoney.com/webapi/json.aspx?type=user_hold&zh=' + num + '&recIdx=0&recCnt=100&js=zuheinfo49988359((x))&callback=zuheinfo49988359&_=1471491487857'
         more_list = urllib2.urlopen(html).read().split(",")
@@ -54,8 +59,8 @@ def catch(num) :
         for i in range(len(holdPos)) :
                 Dictionaries[code[i].split(":")[1].replace('"','')] = int(float(holdPos[i].split(":")[1].replace('"','')) * 100)
 	return Dictionaries
-
-
+	
+	
 def writefile(num, Dictionaries) :
         file1 = open('/tmp/file/' + num + '.txt', 'w')
         for key in Dictionaries :
@@ -83,61 +88,45 @@ def diffile(num) :
 	outputfile.close()
 	sys.stdout=output
 	diff = open('/tmp/change', 'U').read()
-	if '?' in diff :
+	if '+' in diff or '-' in diff :
 		os.remove('/tmp/file/' + num + '.txt')
 		os.rename('/tmp/file/temp' + num + '.txt', '/tmp/file/' + num + '.txt')
 		determine += 1
 	else :
 		os.remove('/tmp/file/temp' + num + '.txt')
+	print determine
 		
 
 
 if __name__ == "__main__" :
-	os.remove('/tmp/change')
+	print '%s :time' %strftime('%Y-%m-%d %H:%M:%S',localtime())
+	if os.path.exists('/tmp/change') :
+		os.remove('/tmp/change')
+	else :
+		changefile = open('/tmp/change', 'w')
+		changefile.close()
 	for num in more_num :
 		fla = flag(num)
+		print fla
 		if fla == 0 :
-			outputfile = open('/tmp/change', 'a')
-        		outputfile.write('%s%s' % (num, os.linesep))
-        		outputfile.write(os.linesep * 4)
-        		outputfile.close()
-			print 'continue'
-                	continue
-		if os.path.exists(r'/tmp/file/' + num + '.txt') :
+			emptyfile = open('/tmp/file/temp' + num + '.txt', 'w')
+        		emptyfile.close()
+			diffile(num)
+			continue
+		if os.path.exists('/tmp/file/' + num + '.txt') :
 			Dictionaries = catch(num)
 			tempfile(num, Dictionaries)
-			diffile(num, )
+			diffile(num)
 		else :
 			Dictionaries = catch(num)
 			writefile(num, Dictionaries)
 	else :
-		print determine
 		if determine != 0 :
 			file = open("/tmp/change")
 	                line = file.read()
         	        file.close()
-              		if send_mail(mailto_list, "持仓变动", line):
-                        	print "发送成功"
-                	else:
-                                print "发送失败"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+			for mailto in mailto_list :
+              			if send_mail(mailto, "Change of position", line):
+                       			print "Send success"
+                		else:
+					print "Send fail"
